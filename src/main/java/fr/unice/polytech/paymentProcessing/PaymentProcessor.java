@@ -3,7 +3,7 @@ package fr.unice.polytech.paymentProcessing;
 import fr.unice.polytech.orderManagement.Order;
 import fr.unice.polytech.orderManagement.OrderStatus;
 
-public class PaymentProcessor {
+public class PaymentProcessor implements IPaymentProcessor{
 
     private final Order order;
     private final IPaymentService paymentService;
@@ -16,7 +16,6 @@ public class PaymentProcessor {
         this.order = order;
         this.paymentService = paymentService;
     }
-
 
 
     public OrderStatus processPayment() {

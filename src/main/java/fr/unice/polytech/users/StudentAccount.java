@@ -16,6 +16,7 @@ public class StudentAccount extends UserAccount {
         super(builder.name, builder.surname, builder.email); // Initialize attributes from UserAccount
         this.studentID = builder.studentID;
         this.bankInfo = builder.bankInfo;
+        this.balance = builder.balance;
     }
     
     public String getStudentID() {
@@ -30,12 +31,23 @@ public class StudentAccount extends UserAccount {
         return bankInfo;
     }
 
+    public boolean debit(double amount) {
+        if (amount <= balance) {
+            balance -= amount;
+            return true;
+        }
+        return false;
+    }
+
+
+
     public static class Builder{
         private String name;
         private String surname;
         private String email;
         private String studentID;
         private BankInfo bankInfo;
+        private double balance = 30;
 
         public Builder(String name, String surname){
             this.name = name;
@@ -54,6 +66,11 @@ public class StudentAccount extends UserAccount {
 
         public Builder bankInfo(String cardNumber, int CVV, int month, int year){
             this.bankInfo = new BankInfo(cardNumber, CVV, month, year);
+            return this;
+        }
+
+        public Builder balance(double balance){
+            this.balance = balance;
             return this;
         }
 
