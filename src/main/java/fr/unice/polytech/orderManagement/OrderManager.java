@@ -12,19 +12,28 @@ import java.util.Map;
 
 public class OrderManager {
 
+
     private List<Order> registeredOrders;
     private List<Order> pendingOrders;
     private Map<Order, Long> orderCreationTimes;
     private static final long TIMEOUT_MILLIS = 3 * 60 * 1000; // 3 minutes
+    private final PaymentProcessorFactory paymentProcessorFactory;
 
     public OrderManager(){
+        this(new PaymentProcessorFactory());
+
+    }
+    public OrderManager(PaymentProcessorFactory paymentProcessorFactory) {
+        this.paymentProcessorFactory = paymentProcessorFactory;
         registeredOrders = new java.util.ArrayList<>();
         pendingOrders = new java.util.ArrayList<>();
         orderCreationTimes = new HashMap<>();
-
     }
 
     public void createOrder(List<Dish> dishes, StudentAccount studentAccount, DeliveryLocation deliveryLocation, Restaurant restaurant) {
+        if (!studentAccount.hasDeliveryLocation(deliveryLocation)) {
+            throw new IllegalArgumentException("Order creation failed: Delivery location is not among the student's saved locations.");
+        }
         Order order = new Order.Builder(studentAccount)
                 .dishes(dishes)
                 .amount(calculateTotalAmount(dishes))
@@ -40,41 +49,34 @@ public class OrderManager {
 
 
     public void initiatePayment(Order order, PaymentMethod paymentMethod) {
+        if (paymentMethod == null) {
+            // The payment method comes from the user selection in the order confirmation flow and can be
+            // missing when the client submits an incomplete request. Fail fast with an explicit error
+            // instead of letting the processor selection crash on a null value.
+            throw new IllegalArgumentException("Payment method must be provided");
+        }
         if (isOrderTimedOut(order)) {
             dropOrder(order);
             return;
         }
-        // Le processeur dépendra du type de paiement
-        IPaymentProcessor processor;
-
-        if (paymentMethod == PaymentMethod.EXTERNAL) {
-                processor = new PaymentProcessor(order);
-        }
-        else if (paymentMethod == PaymentMethod.INTERNAL) {
-            processor = new InternalPaymentProcessor(order);
-        }
-        else {
-            throw new IllegalArgumentException("Unsupported payment method: " + paymentMethod);
-        }
+        //Creattion du processeur de paiement via la factory
+        IPaymentProcessor processor = paymentProcessorFactory.createProcessor(order, paymentMethod);
 
         // Traitement du paiement (réutilisé pour les deux types)
         OrderStatus status = processor.processPayment(order);
         order.setOrderStatus(status);
+
     }
 
     private void dropOrder(Order order) {
         order.setOrderStatus(OrderStatus.CANCELED);
         pendingOrders.remove(order);
+        orderCreationTimes.remove(order); // Important: remove the timer
     }
 
     private boolean isOrderTimedOut(Order order) {
         Long creationTime = orderCreationTimes.get(order);
-        if (creationTime == null) {
-            orderCreationTimes.put(order, System.currentTimeMillis()); // first seen now
-            pendingOrders.add(order);                                   // ensure tracked
-            return false;
-        }
-        return System.currentTimeMillis() - creationTime > TIMEOUT_MILLIS;
+        return (System.currentTimeMillis() - creationTime) > TIMEOUT_MILLIS;
     }
 
 

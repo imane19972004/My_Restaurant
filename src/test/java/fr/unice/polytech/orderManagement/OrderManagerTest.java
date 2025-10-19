@@ -1,8 +1,7 @@
 package fr.unice.polytech.orderManagement;
 
 import fr.unice.polytech.dishes.Dish;
-import fr.unice.polytech.paymentProcessing.BankInfo;
-import fr.unice.polytech.paymentProcessing.PaymentMethod;
+import fr.unice.polytech.paymentProcessing.*;
 import fr.unice.polytech.restaurants.Restaurant;
 import fr.unice.polytech.users.DeliveryLocation;
 import fr.unice.polytech.users.StudentAccount;
@@ -49,6 +48,7 @@ class OrderManagerTest {
 
 
         when(mockStudentAccount.getBankInfo()).thenReturn(mockBankInfo);
+        when(mockStudentAccount.hasDeliveryLocation(mockDeliveryLocation)).thenReturn(true);
         mockDishes = Arrays.asList(mockDish1, mockDish2);
     }
 
@@ -83,22 +83,40 @@ class OrderManagerTest {
         Long creationTime = orderCreationTimes.values().iterator().next();
         assertTrue(Math.abs(System.currentTimeMillis() - creationTime) < 1000);
     }
-
     @Test
     void testInitiatePaymentBeforeTimeout() throws Exception {
-        orderManager.createOrder(mockDishes, mockStudentAccount, mockDeliveryLocation, mockRestaurant);
+        PaymentProcessorFactory factory = mock(PaymentProcessorFactory.class);
+        IPaymentProcessor processor = mock(IPaymentProcessor.class);
+        when(factory.createProcessor(any(Order.class), eq(PaymentMethod.EXTERNAL)))
+                .thenReturn(processor);
+        when(processor.processPayment(any(Order.class)))
+                .thenReturn(OrderStatus.VALIDATED);
 
-        Field pendingOrdersField = OrderManager.class.getDeclaredField("pendingOrders");
-        pendingOrdersField.setAccessible(true);
-        List<Order> pendingOrders = (List<Order>) pendingOrdersField.get(orderManager);
-        Order order = pendingOrders.get(0);
+        OrderManager manager = new OrderManager(factory);
 
-        orderManager.initiatePayment(order, PaymentMethod.EXTERNAL);
+        manager.createOrder(mockDishes, mockStudentAccount, mockDeliveryLocation, mockRestaurant);
 
+        Field f = OrderManager.class.getDeclaredField("pendingOrders");
+        f.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        List<Order> pending = (List<Order>) f.get(manager);
+        assertEquals(1, pending.size());
+        Order order = pending.get(0);
 
-        assertEquals(1, pendingOrders.size());
-        assertNotEquals(OrderStatus.CANCELED, order.getOrderStatus());
+        Field t = OrderManager.class.getDeclaredField("orderCreationTimes");
+        t.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<Order, Long> orderCreationTimes = (Map<Order, Long>) t.get(manager);
+        orderCreationTimes.put(order, System.currentTimeMillis());
+
+        manager.initiatePayment(order, PaymentMethod.EXTERNAL);
+
+        verify(factory).createProcessor(order, PaymentMethod.EXTERNAL);
+        verify(processor).processPayment(order);
+        assertEquals(OrderStatus.VALIDATED, order.getOrderStatus());
+        assertEquals(1, pending.size()); // still pending until registerOrder is called
     }
+
 
     @Test
     void testInitiatePaymentAfterTimeout() throws Exception {
@@ -169,4 +187,58 @@ class OrderManagerTest {
         verify(mockDish1).getPrice();
         verify(mockDish2).getPrice();
     }
+
+    @Test
+    void initiatePaymentUsesFactoryAndUpdatesOrderStatus() throws NoSuchFieldException, IllegalAccessException {
+        PaymentProcessorFactory factory = mock(PaymentProcessorFactory.class);
+        OrderManager managerWithFactory = new OrderManager(factory);
+        Order order = new Order.Builder(mockStudentAccount)
+                .amount(12.0)
+                .build();
+
+        Field pendingOrdersField = OrderManager.class.getDeclaredField("pendingOrders");
+        pendingOrdersField.setAccessible(true);
+        List<Order> pendingOrders = (List<Order>) pendingOrdersField.get(managerWithFactory);
+        pendingOrders.add(order);
+
+        Field orderCreationTimesField = OrderManager.class.getDeclaredField("orderCreationTimes");
+        orderCreationTimesField.setAccessible(true);
+        Map<Order, Long> orderCreationTimes = (Map<Order, Long>) orderCreationTimesField.get(managerWithFactory);
+        orderCreationTimes.put(order, System.currentTimeMillis());
+
+        IPaymentProcessor processor = mock(IPaymentProcessor.class);
+        when(factory.createProcessor(order, PaymentMethod.EXTERNAL)).thenReturn(processor);
+        when(processor.processPayment(order)).thenReturn(OrderStatus.VALIDATED);
+
+        managerWithFactory.initiatePayment(order, PaymentMethod.EXTERNAL);
+
+        verify(factory).createProcessor(order, PaymentMethod.EXTERNAL);
+        verify(processor).processPayment(order);
+        assertEquals(OrderStatus.VALIDATED, order.getOrderStatus());
+    }
+
+    @Test
+    void initiatePaymentThrowsWhenPaymentMethodMissing() {
+        Order order = new Order.Builder(mockStudentAccount)
+                .amount(10.0)
+                .build();
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> orderManager.initiatePayment(order, null));
+
+        assertTrue(exception.getMessage().contains("Payment method must be provided"));
+        assertEquals(OrderStatus.PENDING, order.getOrderStatus());
+    }
+
+    @Test
+    void createOrderFailsForUnknownDeliveryLocation() {
+        DeliveryLocation otherLocation = mock(DeliveryLocation.class);
+        when(mockStudentAccount.hasDeliveryLocation(otherLocation)).thenReturn(false);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> orderManager.createOrder(mockDishes, mockStudentAccount, otherLocation, mockRestaurant));
+
+        assertTrue(exception.getMessage().contains("saved locations"));
+    }
+
 }

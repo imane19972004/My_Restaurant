@@ -1,5 +1,7 @@
 package fr.unice.polytech.users; // Assuming this package
 
+import java.util.Objects;
+
 public class DeliveryLocation {
     
     // Attributes from Class Diagram:
@@ -50,6 +52,18 @@ public class DeliveryLocation {
 
     public void setZipCode(String zipCode) {
         this.zipCode = zipCode;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        DeliveryLocation that = (DeliveryLocation) o;
+        return Objects.equals(name, that.name) && Objects.equals(address, that.address) && Objects.equals(city, that.city) && Objects.equals(zipCode, that.zipCode);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, address, city, zipCode);
     }
 
     @Override

@@ -1,11 +1,14 @@
 package fr.unice.polytech.dishes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 
 public class Dish extends PriceableItem {
     private String description;
     private DishType cuisineType = DishType.GENERAL;
+    private DishCategory category;
+    private List<Topping> toppings;
 
     public Dish(String name, double price) {
         super(name, price);
@@ -20,14 +23,15 @@ public class Dish extends PriceableItem {
         return cuisineType;
     }
 
-    private DishCategory category;
-    private List<Topping> toppings;
-
-
     public Dish(String name, String description, double price) {
         super(name, price);
         this.description = description;
         this.toppings = new ArrayList<>();
+    }
+
+
+    public void setCuisineType(DishType cuisineType) {
+        this.cuisineType = cuisineType;
     }
 
 
@@ -71,4 +75,15 @@ public class Dish extends PriceableItem {
     }
 
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Dish dish = (Dish) o;
+        return Objects.equals(description, dish.description) && cuisineType == dish.cuisineType && category == dish.category && Objects.equals(toppings, dish.toppings);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(description, cuisineType, category, toppings);
+    }
 }

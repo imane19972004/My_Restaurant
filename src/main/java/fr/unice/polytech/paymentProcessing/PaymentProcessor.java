@@ -28,14 +28,19 @@ public class PaymentProcessor implements IPaymentProcessor{
     }
 
     public OrderStatus updatePaymentStatus(Order order) {
+        OrderStatus currentStatus = order.getOrderStatus();
+        if (currentStatus == OrderStatus.VALIDATED) {
+            return currentStatus;
+        }
+
         OrderStatus status = processPayment(order);
         if (status == OrderStatus.VALIDATED) {
-            return  status;
+            return status;
         }
-        int i = 0;
-        while (i<2 && status == OrderStatus.CANCELED) {
+        int retries = 0;
+        while (retries < 2 && status == OrderStatus.CANCELED) {
             status = processPayment(order);
-            i++;
+            retries++;
         }
         return status;
     }

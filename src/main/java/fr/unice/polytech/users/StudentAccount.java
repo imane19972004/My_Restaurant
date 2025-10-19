@@ -2,12 +2,17 @@ package fr.unice.polytech.users; // Assuming this package
 
 import fr.unice.polytech.paymentProcessing.BankInfo;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 // Note: Requires UserAccount class from above.
 public class StudentAccount extends UserAccount {
 
     private String studentID;
     private double balance = 30 ;
     private BankInfo bankInfo;
+    private List<DeliveryLocation> prerecordedLocations = new ArrayList<>();
 
     /**
      * Constructor for StudentAccount.
@@ -17,6 +22,21 @@ public class StudentAccount extends UserAccount {
         this.studentID = builder.studentID;
         this.bankInfo = builder.bankInfo;
         this.balance = builder.balance;
+        this.prerecordedLocations = new ArrayList<>(builder.prerecordedLocations);
+    }
+
+    public List<DeliveryLocation> getDeliveryLocations() {
+        return Collections.unmodifiableList(prerecordedLocations);
+    }
+
+    public boolean hasDeliveryLocation(DeliveryLocation deliveryLocation) {
+        return deliveryLocation != null && prerecordedLocations.contains(deliveryLocation);
+    }
+
+    public void addDeliveryLocation(DeliveryLocation deliveryLocation) {
+        if (deliveryLocation != null && !prerecordedLocations.contains(deliveryLocation)) {
+            prerecordedLocations.add(deliveryLocation);
+        }
     }
     
     public String getStudentID() {
@@ -41,13 +61,14 @@ public class StudentAccount extends UserAccount {
 
 
 
-    public static class Builder{
+    public static class Builder {
         private String name;
         private String surname;
         private String email;
         private String studentID;
         private BankInfo bankInfo;
         private double balance = 30;
+        private List<DeliveryLocation> prerecordedLocations = new ArrayList<>();
 
         public Builder(String name, String surname){
             this.name = name;
@@ -71,6 +92,22 @@ public class StudentAccount extends UserAccount {
 
         public Builder balance(double balance){
             this.balance = balance;
+            return this;
+        }
+
+        public Builder deliveryLocations(List<DeliveryLocation> deliveryLocations) {
+            if (deliveryLocations == null) {
+                this.prerecordedLocations = new ArrayList<>();
+            } else {
+                this.prerecordedLocations = new ArrayList<>(deliveryLocations);
+            }
+            return this;
+        }
+
+        public Builder addDeliveryLocation(DeliveryLocation deliveryLocation) {
+            if (deliveryLocation != null) {
+                this.prerecordedLocations.add(deliveryLocation);
+            }
             return this;
         }
 

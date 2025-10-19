@@ -7,6 +7,7 @@ import fr.unice.polytech.users.DeliveryLocation;
 import fr.unice.polytech.users.StudentAccount;
 
 import java.util.List;
+import java.util.Objects;
 
 public class Order {
     private StudentAccount studentAccount;
@@ -100,6 +101,19 @@ public class Order {
 
         public Order build() {
             return new Order(this);
+        }
+
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass()) return false;
+            Builder builder = (Builder) o;
+            return Double.compare(amount, builder.amount) == 0 && Objects.equals(studentAccount, builder.studentAccount) && Objects.equals(restaurant, builder.restaurant) && Objects.equals(dishes, builder.dishes) && Objects.equals(deliveryLocation, builder.deliveryLocation) && orderStatus == builder.orderStatus;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(studentAccount, amount, restaurant, dishes, deliveryLocation, orderStatus);
         }
     }
 }
