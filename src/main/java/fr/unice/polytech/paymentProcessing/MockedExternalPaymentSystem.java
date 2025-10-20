@@ -2,13 +2,14 @@ package fr.unice.polytech.paymentProcessing;
 
 import fr.unice.polytech.orderManagement.Order;
 import fr.unice.polytech.users.StudentAccount;
+import org.mockito.internal.matchers.Or;
 
 import java.time.YearMonth;
 import java.util.Random;
 
 public class MockedExternalPaymentSystem {
 
-    private final Order order;
+    private Order order;
     private final Random random = new Random();
 
 
@@ -16,7 +17,8 @@ public class MockedExternalPaymentSystem {
         this.order = order;
     }
 
-    public boolean mockedCheckingInformation() {
+    public boolean mockedCheckingInformation(Order givenOrder){
+        this.order = givenOrder;
         BankInfo bankInfo = ((StudentAccount)order.getStudentAccount()).getBankInfo();
 
         if (bankInfo.getExpirationDate().isBefore(YearMonth.now())) {

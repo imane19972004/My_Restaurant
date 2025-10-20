@@ -5,5 +5,4 @@ import fr.unice.polytech.orderManagement.OrderStatus;
 
 public interface IPaymentProcessor {
     public OrderStatus processPayment(Order order);
-    public OrderStatus updatePaymentStatus(Order order);
 }

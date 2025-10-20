@@ -4,6 +4,10 @@ package fr.unice.polytech.restaurants;
 
 
 
+import fr.unice.polytech.restaurants.TimeSlot;
+import fr.unice.polytech.dishes.Dish;
+import fr.unice.polytech.dishes.DishCategory;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -208,9 +212,9 @@ class RestaurantManagerTest {
         void shouldBlockTimeSlotByDecreasingCapacity() {
             manager.addRestaurant(restaurant1);
             int initialCapacity = restaurant1.getCapacity(slot1);
-
+            
             manager.blockTimeSlot(slot1, restaurant1);
-
+            
             assertEquals(initialCapacity - 1, restaurant1.getCapacity(slot1));
         }
 
@@ -226,27 +230,27 @@ class RestaurantManagerTest {
         @DisplayName("Should block multiple time slots independently")
         void shouldBlockMultipleTimeSlotsIndependently() {
             manager.addRestaurant(restaurant1);
-
+            
             int capacity1Before = restaurant1.getCapacity(slot1);
             int capacity2Before = restaurant1.getCapacity(slot2);
-
+            
             manager.blockTimeSlot(slot1, restaurant1);
             manager.blockTimeSlot(slot2, restaurant1);
 
             assertEquals(capacity1Before - 1, restaurant1.getCapacity(slot1));
             assertEquals(capacity2Before - 1, restaurant1.getCapacity(slot2));
         }
-
+        
         @Test
         @DisplayName("Should not reduce capacity below zero")
         void shouldNotReduceCapacityBelowZero() {
             Restaurant restaurant = new Restaurant("Test");
             restaurant.setCapacity(slot1, 1);
             manager.addRestaurant(restaurant);
-
+            
             manager.blockTimeSlot(slot1, restaurant);
             assertEquals(0, restaurant.getCapacity(slot1));
-
+            
             manager.blockTimeSlot(slot1, restaurant);
             assertEquals(0, restaurant.getCapacity(slot1)); // Reste à 0
         }
@@ -262,10 +266,10 @@ class RestaurantManagerTest {
         @DisplayName("Should unblock time slot by increasing capacity")
         void shouldUnblockTimeSlotByIncreasingCapacity() {
             manager.addRestaurant(restaurant1);
-
+            
             int capacityBefore = restaurant1.getCapacity(slot1);
             manager.unblockTimeSlot(slot1, restaurant1);
-
+            
             assertEquals(capacityBefore + 1, restaurant1.getCapacity(slot1));
         }
 
@@ -318,12 +322,9 @@ class RestaurantManagerTest {
         restaurant1.setCapacity(slot3, 0);
 
         List<TimeSlot> availableSlots = manager.getAvailableTimeSlots(restaurant1);
+
         assertTrue(availableSlots.isEmpty());
     }
-
-
-
-    
 
 
 
@@ -379,7 +380,7 @@ class RestaurantManagerTest {
     @DisplayName("Edge Cases Tests")
     class EdgeCasesTests {
 
-
+        
         @Test
         @DisplayName("Should handle blocking slot not in capacity map")
         void shouldHandleBlockingSlotNotInCapacityMap() {
@@ -390,7 +391,7 @@ class RestaurantManagerTest {
             assertDoesNotThrow(() -> manager.blockTimeSlot(newSlot, restaurant1));
             assertEquals(0, restaurant1.getCapacity(newSlot));
         }
-
+            
 
         @Test
         @DisplayName("Should handle restaurant name with special characters")

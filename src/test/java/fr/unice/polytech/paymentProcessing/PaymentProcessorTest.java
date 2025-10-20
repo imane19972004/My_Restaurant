@@ -16,7 +16,9 @@ class PaymentProcessorTest {
     private final String EMAIL = "alice.smith@etu.unice.fr";
     private final String ID = "22400632";
 
-    Order order;
+    private Order order;
+    private IPaymentService paymentService;
+    private PaymentProcessor processor;
 
     @BeforeEach
     void setUp() {
@@ -27,114 +29,72 @@ class PaymentProcessorTest {
                 .build();
 
         order = new Order.Builder(student).build();
+
+        paymentService = mock(IPaymentService.class);
+        processor = new PaymentProcessor(order, paymentService);
     }
 
 
     @Test
-    void processPaymentWithSuccessfulExternalPaymentValidatesOrder() {
-        IPaymentService paymentService = mock(IPaymentService.class);
+    void processPayment_ShouldValidate_OnFirstAttempt() {
         when(paymentService.processExternalPayment(order)).thenReturn(true);
-        PaymentProcessor processor = new PaymentProcessor(order, paymentService);
 
-        OrderStatus status = processor.processPayment();
+        OrderStatus status = processor.processPayment(order);
 
         assertEquals(OrderStatus.VALIDATED, status);
-        assertEquals(OrderStatus.PENDING, order.getOrderStatus());
-        verify(paymentService).processExternalPayment(order);
+        verify(paymentService, times(1)).processExternalPayment(order);
     }
 
     @Test
-    void processPaymentWithFailedExternalPaymentCancelsOrder() {
-        IPaymentService paymentService = mock(IPaymentService.class);
-        when(paymentService.processExternalPayment(order)).thenReturn(false);
-        PaymentProcessor processor = new PaymentProcessor(order, paymentService);
-
-        OrderStatus status = processor.processPayment();
-
-        assertEquals(OrderStatus.CANCELED, status);
-        assertEquals(OrderStatus.PENDING, order.getOrderStatus());
-        verify(paymentService).processExternalPayment(order);
-    }
-
-    @Test
-    void processPaymentWithCustomOrderUsesProvidedOrderInstance() {
-        IPaymentService paymentService = mock(IPaymentService.class);
-        PaymentProcessor processor = new PaymentProcessor(order, paymentService);
-
-        StudentAccount otherStudent = new StudentAccount.Builder(NAME, SURNAME)
-                .email("other." + EMAIL)
-                .studentId(ID + "1")
-                .bankInfo("4321 6789 4321 6789", 402, 6, 29)
-                .build();
-        Order otherOrder = new Order.Builder(otherStudent).build();
-
-        when(paymentService.processExternalPayment(otherOrder)).thenReturn(false);
-
-        OrderStatus status = processor.processPayment(otherOrder);
-
-        assertEquals(OrderStatus.CANCELED, status);
-        assertEquals(OrderStatus.PENDING, order.getOrderStatus());
-        verify(paymentService).processExternalPayment(otherOrder);
-        verify(paymentService, never()).processExternalPayment(order);
-    }
-
-    @Test
-    void updatePaymentStatus_ShouldValidate_OnSuccessAfterFirstFailure() {
-        IPaymentService paymentService = mock(IPaymentService.class);
+    void processPayment_ShouldValidate_OnSecondAttempt() {
         when(paymentService.processExternalPayment(order))
                 .thenReturn(false)
                 .thenReturn(true);
 
-        PaymentProcessor processor = new PaymentProcessor(order, paymentService);
-
-        OrderStatus status = processor.updatePaymentStatus(order);
+        OrderStatus status = processor.processPayment(order);
 
         assertEquals(OrderStatus.VALIDATED, status);
         verify(paymentService, times(2)).processExternalPayment(order);
     }
 
     @Test
-    void updatePaymentStatus_ShouldCancel_AfterThreeConsecutiveFailures() {
-        IPaymentService paymentService = mock(IPaymentService.class);
+    void processPayment_ShouldValidate_OnThirdAttempt() {
         when(paymentService.processExternalPayment(order))
-                .thenReturn(false) // 1ère tentative
-                .thenReturn(false) // 2ème tentative (Relance 1)
-                .thenReturn(false); // 3ème tentative (Relance 2)
+                .thenReturn(false)
+                .thenReturn(false)
+                .thenReturn(true);
 
-        PaymentProcessor processor = new PaymentProcessor(order, paymentService);
+        OrderStatus status = processor.processPayment(order);
 
-        OrderStatus status = processor.updatePaymentStatus(order);
+        assertEquals(OrderStatus.VALIDATED, status);
+        verify(paymentService, times(3)).processExternalPayment(order);
+    }
+
+    @Test
+    void processPayment_ShouldCancel_AfterThreeFailedAttempts() {
+        when(paymentService.processExternalPayment(order)).thenReturn(false);
+
+        OrderStatus status = processor.processPayment(order);
 
         assertEquals(OrderStatus.CANCELED, status);
         verify(paymentService, times(3)).processExternalPayment(order);
     }
 
     @Test
-    void updatePaymentStatus_ShouldValidate_OnImmediateSuccess() {
-        IPaymentService paymentService = mock(IPaymentService.class);
-        when(paymentService.processExternalPayment(order))
-                .thenReturn(true);
+    void processPayment_ShouldUseTheCorrectOrderInstance() {
+        StudentAccount otherStudent = new StudentAccount.Builder("Bob", "Doe")
+                .email("other." + EMAIL)
+                .studentId(ID + "1")
+                .build();
+        Order otherOrder = new Order.Builder(otherStudent).build();
 
-        PaymentProcessor processor = new PaymentProcessor(order, paymentService);
+        when(paymentService.processExternalPayment(otherOrder)).thenReturn(true);
 
-        OrderStatus status = processor.updatePaymentStatus(order);
-
-        assertEquals(OrderStatus.VALIDATED, status);
-        verify(paymentService, times(1)).processExternalPayment(order);
-    }
-    @Test
-    void updatePaymentStatus_ShouldValidate_OnSuccessAtLastRetry() {
-        IPaymentService paymentService = mock(IPaymentService.class);
-        when(paymentService.processExternalPayment(order))
-                .thenReturn(false)
-                .thenReturn(false)
-                .thenReturn(true);
-
-        PaymentProcessor processor = new PaymentProcessor(order, paymentService);
-
-        OrderStatus status = processor.updatePaymentStatus(order);
+        OrderStatus status = processor.processPayment(otherOrder);
 
         assertEquals(OrderStatus.VALIDATED, status);
-        verify(paymentService, times(3)).processExternalPayment(order);
+        verify(paymentService).processExternalPayment(otherOrder);
+        verify(paymentService, never()).processExternalPayment(order);
     }
 }
+

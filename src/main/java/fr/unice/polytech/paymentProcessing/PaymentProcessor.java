@@ -9,7 +9,7 @@ public class PaymentProcessor implements IPaymentProcessor{
     private final IPaymentService paymentService;
 
     public PaymentProcessor(Order order) {
-        this(order, new PaymentService());
+        this(order, new PaymentService(order));
     }
 
     public PaymentProcessor(Order order, IPaymentService paymentService) {
@@ -22,27 +22,15 @@ public class PaymentProcessor implements IPaymentProcessor{
         return processPayment(order);
     }
 
+
     public OrderStatus processPayment(Order order){
-        boolean paymentSuccessful = paymentService.processExternalPayment(order);
-        return paymentSuccessful ? OrderStatus.VALIDATED : OrderStatus.CANCELED;
-    }
-
-    public OrderStatus updatePaymentStatus(Order order) {
-        OrderStatus currentStatus = order.getOrderStatus();
-        if (currentStatus == OrderStatus.VALIDATED) {
-            return currentStatus;
+        for (int i = 0; i < 3; i++) {
+            boolean paymentSuccessful = paymentService.processExternalPayment(order);
+            if (paymentSuccessful) {
+                return OrderStatus.VALIDATED;
+            }
         }
-
-        OrderStatus status = processPayment(order);
-        if (status == OrderStatus.VALIDATED) {
-            return status;
-        }
-        int retries = 0;
-        while (retries < 2 && status == OrderStatus.CANCELED) {
-            status = processPayment(order);
-            retries++;
-        }
-        return status;
+        return OrderStatus.CANCELED;
     }
 
 }
