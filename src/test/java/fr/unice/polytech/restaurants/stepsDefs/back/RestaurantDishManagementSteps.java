@@ -1,9 +1,7 @@
-package fr.unice.polytech.restaurants.stepDefs.back;
+package fr.unice.polytech.restaurants.stepsDefs.back;
 
 import fr.unice.polytech.restaurants.Restaurant;
-import fr.unice.polytech.restaurants.stepsDefs.back.ScenarioContext;
 import io.cucumber.java.en.Given;
-
 
 import io.cucumber.java.en.When;
 import io.cucumber.java.en.Then;
@@ -94,7 +92,7 @@ public class RestaurantDishManagementSteps {
     @io.cucumber.java.en.Given("a dish {string} exists with price {double}")
     public void a_dish_exists_with_price(String dishName, double price) {
         currentDish = new Dish(dishName, "Test dish", price);
-
+        //restaurant.addDish(currentDish);
         ctx.restaurant.addDish(currentDish);
     }
 
@@ -179,9 +177,7 @@ public class RestaurantDishManagementSteps {
     // Note: Les extra options ne sont pas encore implémentées dans le domaine
     // On utilise une variable temporaire pour faire passer les tests
 
-
-
-    private final Map<String, Double> extraOptions = new HashMap<>();
+    private Map<String, Double> extraOptions = new HashMap<>();
 
     @When("I define an extra option {string} with price {double}")
     public void i_define_an_extra_option_with_price(String extraName, double price) {
@@ -220,5 +216,5 @@ public class RestaurantDishManagementSteps {
         assertNotNull(currentAllergenInfo, "Allergen information should exist");
         assertTrue(currentAllergenInfo.toLowerCase().contains(allergen.toLowerCase()),
             "Allergen warning should mention '" + allergen + "'");
-}
+ }
 }

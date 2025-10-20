@@ -296,7 +296,7 @@ class RestaurantTest {
     @DisplayName("Should block time slot by reducing capacity to zero")
     void shouldBlockTimeSlotByReducingCapacity() {
         restaurant.setCapacity(slot1, 5);
-    
+
         // Bloquer en réduisant la capacité
         for (int i = 0; i < 5; i++) {
             restaurant.blockTimeSlot(slot1);
@@ -310,8 +310,7 @@ class RestaurantTest {
     @DisplayName("Should unblock time slot by increasing capacity")
     void shouldUnblockTimeSlotByIncreasingCapacity() {
         restaurant.setCapacity(slot1, 0);
-      restaurant.unblockTimeSlot(slot1);
-
+        restaurant.unblockTimeSlot(slot1);
         assertTrue(restaurant.getCapacity(slot1) > 0);
         assertTrue(restaurant.getAvailableTimeSlots().contains(slot1));
     }
