@@ -9,7 +9,7 @@ public class TimeSlot {
     private DayOfWeek dayOfWeek;
     private LocalTime startTime;
     private LocalTime endTime;
-    
+
     public TimeSlot(DayOfWeek dayOfWeek, LocalTime startTime, LocalTime endTime) {
         //if (capacity <= 0) throw new IllegalArgumentException("Order capacity must be positive");
         this.dayOfWeek = dayOfWeek;
@@ -27,7 +27,6 @@ public class TimeSlot {
     public TimeSlot(LocalTime startTime, LocalTime endTime) {
         this.startTime = startTime;
         this.endTime = endTime;
-        // remainingOrders = capacity
     }
 
     // Getters

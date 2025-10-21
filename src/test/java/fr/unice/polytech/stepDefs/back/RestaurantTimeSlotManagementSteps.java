@@ -1,6 +1,6 @@
 package fr.unice.polytech.stepDefs.back;
 
-import fr.unice.polytech.restaurants.ScenarioContext;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.But;
@@ -8,6 +8,7 @@ import io.cucumber.java.en.But;
 import static org.junit.jupiter.api.Assertions.*;
 
 import fr.unice.polytech.restaurants.RestaurantManager;
+import fr.unice.polytech.restaurants.ScenarioContext;
 import fr.unice.polytech.restaurants.TimeSlot;
 
 import java.time.LocalTime;
@@ -21,17 +22,29 @@ public class RestaurantTimeSlotManagementSteps {
     private List<TimeSlot> availableTimeSlots;
     private String warningMessage;
 
-    // ✅ un seul constructeur, Pico injecte ScenarioContext
     public RestaurantTimeSlotManagementSteps(ScenarioContext ctx) {
         this.ctx = ctx;
         this.restaurantManager = new RestaurantManager();
     }
 
-    private String key(String startTime, String endTime) { return startTime + "-" + endTime; }
+    private String key(String startTime, String endTime) { 
+        return startTime + "-" + endTime; 
+    }
 
-    // ============ Define slots ============
-    @When("I create a time slot from {string} to {string} with capacity {int}")
-    public void i_create_time_slot_with_capacity(String startTime, String endTime, int capacity) {
+    // ============ BACKGROUND STEPS ============
+
+    @Given("the restaurant manager is logged in to {string}")
+    public void the_restaurant_manager_is_logged_in_to(String restaurantName) {
+        assertNotNull(ctx.restaurant, "Restaurant should be initialized");
+        assertEquals(restaurantName, ctx.restaurant.getRestaurantName());
+        ctx.managerLoggedIn = true;
+        restaurantManager.addRestaurant(ctx.restaurant);
+    }
+
+    // ============ SCENARIO 1: Define slots ============
+
+    @When("the restaurant manager creates a time slot from {string} to {string} with capacity {int}")
+    public void the_restaurant_manager_creates_a_time_slot_with_capacity(String startTime, String endTime, int capacity) {
         TimeSlot slot = new TimeSlot(LocalTime.parse(startTime), LocalTime.parse(endTime));
         ctx.restaurant.setCapacity(slot, capacity);
         timeSlots.put(key(startTime, endTime), slot);
@@ -51,63 +64,71 @@ public class RestaurantTimeSlotManagementSteps {
         assertEquals(expectedCapacity, ctx.restaurant.getCapacity(slot));
     }
 
-    // ============ Block ============
-    @io.cucumber.java.en.Given("a time slot from {string} to {string} exists with capacity {int}")
+    // ============ SCENARIO 2: Block ============
+
+    @Given("a time slot from {string} to {string} exists with capacity {int}")
     public void a_time_slot_exists_with_capacity(String start, String end, int capacity) {
-        i_create_time_slot_with_capacity(start, end, capacity);
+        the_restaurant_manager_creates_a_time_slot_with_capacity(start, end, capacity);
     }
 
-    @When("I block the time slot {string} {int} times")
-    public void i_block_time_slot_multiple_times(String timeRange, int times) {
+    @When("the restaurant manager blocks the time slot {string} {int} times")
+    public void the_restaurant_manager_blocks_time_slot_multiple_times(String timeRange, int times) {
         TimeSlot slot = timeSlots.get(timeRange);
         assertNotNull(slot, "Time slot should exist before blocking");
-        for (int i = 0; i < times; i++) restaurantManager.blockTimeSlot(slot, ctx.restaurant);
+        for (int i = 0; i < times; i++) {
+            restaurantManager.blockTimeSlot(slot, ctx.restaurant);
+        }
     }
 
     @Then("the time slot {string} should not be available for booking")
-    public void time_slot_should_not_be_available(String timeRange) {
+    public void the_time_slot_should_not_be_available(String timeRange) {
         var available = restaurantManager.getAvailableTimeSlots(ctx.restaurant);
         assertFalse(available.contains(timeSlots.get(timeRange)),
                 "Time slot " + timeRange + " should not be available");
     }
 
-    // ============ Unblock ============
-    @When("I unblock the time slot {string}")
-    public void i_unblock_time_slot(String timeRange) {
+    // ============ SCENARIO 3: Unblock ============
+
+    @When("the restaurant manager unblocks the time slot {string}")
+    public void the_restaurant_manager_unblocks_time_slot(String timeRange) {
         TimeSlot slot = timeSlots.get(timeRange);
         assertNotNull(slot, "Time slot should exist before unblocking");
         restaurantManager.unblockTimeSlot(slot, ctx.restaurant);
     }
 
     @Then("the time slot {string} should have capacity greater than {int}")
-    public void time_slot_should_have_capacity_greater_than(String timeRange, int minCapacity) {
+    public void the_time_slot_should_have_capacity_greater_than(String timeRange, int minCapacity) {
         int actual = ctx.restaurant.getCapacity(timeSlots.get(timeRange));
-        assertTrue(actual > minCapacity, "Capacity should be > " + minCapacity + " but was " + actual);
+        assertTrue(actual > minCapacity, 
+                "Capacity should be > " + minCapacity + " but was " + actual);
     }
 
     @Then("the time slot {string} should be available for booking")
-    public void time_slot_should_be_available(String timeRange) {
+    public void the_time_slot_should_be_available(String timeRange) {
         var available = restaurantManager.getAvailableTimeSlots(ctx.restaurant);
         assertTrue(available.contains(timeSlots.get(timeRange)),
                 "Time slot " + timeRange + " should be available");
     }
 
-    // ============ Prevent negative ============
+    // ============ SCENARIO 4: Prevent negative ============
+
     @Then("the system should not allow negative capacity")
-    public void system_should_not_allow_negative_capacity() {
+    public void the_system_should_not_allow_negative_capacity() {
         for (TimeSlot slot : timeSlots.values()) {
-            assertTrue(ctx.restaurant.getCapacity(slot) >= 0, "Capacity must not be negative");
+            assertTrue(ctx.restaurant.getCapacity(slot) >= 0, 
+                    "Capacity must not be negative");
         }
     }
 
-    // ============ View available ============
-    @When("I request all available time slots")
-    public void i_request_all_available_time_slots() {
+    // ============ SCENARIO 5: View available ============
+
+    @When("the restaurant manager requests all available time slots")
+    public void the_restaurant_manager_requests_all_available_time_slots() {
         availableTimeSlots = restaurantManager.getAvailableTimeSlots(ctx.restaurant);
     }
 
-    @Then("I should see {int} available time slots")
-    public void i_should_see_available_time_slots(int expectedCount) {
+    @Then("the restaurant manager should see {int} available time slots")
+    public void the_restaurant_manager_should_see_available_time_slots(int expectedCount) {
         assertNotNull(availableTimeSlots);
         assertEquals(expectedCount, availableTimeSlots.size());
     }
@@ -115,34 +136,39 @@ public class RestaurantTimeSlotManagementSteps {
     @Then("the list should include {string}")
     public void the_list_should_include(String timeRange) {
         TimeSlot expected = timeSlots.get(timeRange);
-        assertNotNull(expected);
-        assertTrue(availableTimeSlots.contains(expected), "Should include " + timeRange);
+        assertNotNull(expected, "Time slot " + timeRange + " should be in the map");
+        assertTrue(availableTimeSlots.contains(expected), 
+                "Should include " + timeRange);
     }
 
     @But("the list should not include {string}")
     public void the_list_should_not_include(String timeRange) {
         TimeSlot excluded = timeSlots.get(timeRange);
-        if (excluded != null) assertFalse(availableTimeSlots.contains(excluded),
-                "Should NOT include " + timeRange);
+        if (excluded != null) {
+            assertFalse(availableTimeSlots.contains(excluded),
+                    "Should NOT include " + timeRange);
+        }
     }
 
-    // ============ Update capacity ============
-    @When("I update the time slot {string} capacity to {int}")
-    public void i_update_time_slot_capacity(String timeRange, int newCapacity) {
+    // ============ SCENARIO 6: Update capacity ============
+
+    @When("the restaurant manager updates the time slot {string} capacity to {int}")
+    public void the_restaurant_manager_updates_time_slot_capacity(String timeRange, int newCapacity) {
         TimeSlot slot = timeSlots.get(timeRange);
-        assertNotNull(slot);
+        assertNotNull(slot, "Time slot " + timeRange + " should exist");
         ctx.restaurant.setCapacity(slot, newCapacity);
     }
 
-    // ============ No time slots configured ============
-    @io.cucumber.java.en.Given("the restaurant has no time slots configured")
-    public void restaurant_has_no_time_slots_configured() {
+    // ============ SCENARIO 7: No time slots configured ============
+
+    @Given("the restaurant has no time slots configured")
+    public void the_restaurant_has_no_time_slots_configured() {
         assertTrue(ctx.restaurant.getAvailableTimeSlots().isEmpty(),
                 "Expected no time slots configured at start");
     }
 
     @Then("a warning message {string} should be displayed")
-    public void warning_message_should_be_displayed(String expectedMessage) {
+    public void a_warning_message_should_be_displayed(String expectedMessage) {
         if (availableTimeSlots == null || availableTimeSlots.isEmpty()) {
             warningMessage = "No time slots configured";
         }
