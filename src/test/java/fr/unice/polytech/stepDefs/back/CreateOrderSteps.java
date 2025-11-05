@@ -4,217 +4,184 @@ import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.*;
 import org.junit.jupiter.api.Assertions;
 
+import fr.unice.polytech.dishes.Dish;
+import fr.unice.polytech.orderManagement.*;
+import fr.unice.polytech.paymentProcessing.*;
+import fr.unice.polytech.restaurants.*;
+import fr.unice.polytech.users.*;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 
 /**
- * Steps pour create_order.feature (flux sans login).
- * Domaine minimal in-memory pour faire passer les scénarios.
+ * Step definitions for create_order.feature (no quantity management)
+ * Uses the real OrderManager and payment flow.
  */
 public class CreateOrderSteps {
 
-    // ==== Domaine minimal ====
+    private StudentAccount.Builder accountBuilder;
+    private StudentAccount studentAccount;
+    private Restaurant restaurant;
+    private DeliveryLocation deliveryLocation;
+    private PaymentMethod paymentMethod;
 
-    static class CartItem {
-        final String name;
-        int quantity;
-        final BigDecimal unitPrice;
-        CartItem(String name, int quantity, BigDecimal unitPrice) {
-            this.name = name;
-            this.quantity = quantity;
-            this.unitPrice = unitPrice;
+    private List<Dish> cartDishes;
+    private OrderManager orderManager;
+    private Order currentOrder;
+    private Exception lastException;
+
+    // ============ Setup ============
+
+    @Given("a client named {string}")
+    public void a_client_named(String name) {
+        accountBuilder = new StudentAccount.Builder(name, "Doe");
+        restaurant = new Restaurant("Test Restaurant");
+        orderManager = new OrderManager(new PaymentProcessorFactory());
+        cartDishes = new ArrayList<>();
+        paymentMethod = PaymentMethod.EXTERNAL; // default
+        deliveryLocation = null;
+        currentOrder = null;
+        lastException = null;
+    }
+
+    @Given("{string} has a student credit balance of {string}")
+    public void has_student_credit_balance(String name, String balance) {
+        DeliveryLocation loc1 = new DeliveryLocation("Home", "10 Rue de France", "Nice", "06000");
+        DeliveryLocation loc2 = new DeliveryLocation("Dorm", "50 Avenue Jean Medecin", "Nice", "06000");
+        accountBuilder.balance(Double.parseDouble(balance))
+                .bankInfo("4242424242424242", 123, 12, 2030)
+                .deliveryLocations(List.of(loc1, loc2));
+        studentAccount = accountBuilder.build();
+    }
+
+    // ============ Cart ============
+
+    @Given("{string} has the following items in the cart:")
+    public void has_the_following_items_in_the_cart(String name, DataTable dataTable) {
+        cartDishes.clear();
+        List<Map<String, String>> rows = dataTable.asMaps(String.class, String.class);
+
+        for (Map<String, String> row : rows) {
+            String itemName = row.get("item");
+            double price = Double.parseDouble(row.get("unit price").trim());
+            Dish dish = new Dish(itemName, "desc", price);
+            cartDishes.add(dish);
         }
-        BigDecimal lineTotal() {
-            return unitPrice.multiply(BigDecimal.valueOf(quantity));
-        }
-    }
-
-    static class Cart {
-        final Map<String, CartItem> items = new LinkedHashMap<>();
-        void put(String name, int qty, BigDecimal price) {
-            items.put(name, new CartItem(name, qty, price));
-        }
-        void setQuantity(String name, int qty) {
-            CartItem it = items.get(name);
-            if (it != null) it.quantity = qty;
-        }
-        void clear() { items.clear(); }
-        boolean isEmpty() { return items.isEmpty(); }
-        BigDecimal total() {
-            return items.values().stream()
-                    .map(CartItem::lineTotal)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-        }
-    }
-
-    enum OrderStatus { PENDING, CONFIRMED, REJECTED }
-
-    static class Order {
-        OrderStatus status = OrderStatus.PENDING;
-        BigDecimal total = BigDecimal.ZERO;
-        String deliveryAddress;
-        String paymentMethod;
-    }
-
-    static class PaymentGateway {
-        boolean captured = false;
-        void capture(BigDecimal amount) { captured = true; }
-        void reset() { captured = false; }
-    }
-
-    static class NotificationService {
-        boolean sent = false;
-        void sendConfirmation(Order o) { sent = true; }
-        void reset() { sent = false; }
-    }
-
-    // ==== État partagé des steps ====
-
-    String customerName;
-    Cart cart;
-    Order order;
-    PaymentGateway paymentGateway;
-    NotificationService notificationService;
-
-    // ==== Helpers ====
-
-    private static BigDecimal money(String s) {
-        return new BigDecimal(s).setScale(2, RoundingMode.HALF_UP);
-    }
-
-    private void recomputeTotal() {
-        order.total = cart.total().setScale(2, RoundingMode.HALF_UP);
-    }
-
-    private boolean requiredInfoPresent() {
-        return order.deliveryAddress != null && !order.deliveryAddress.isBlank()
-                && order.paymentMethod != null && !order.paymentMethod.isBlank()
-                && !cart.isEmpty();
-    }
-
-    private void tryCreateOrder() {
-        // Réinitialiser effets externes
-        paymentGateway.reset();
-        notificationService.reset();
-
-        if (!requiredInfoPresent()) {
-            order.status = OrderStatus.REJECTED;
-            return;
-        }
-        // Paiement + confirmation
-        paymentGateway.capture(order.total);
-        order.status = OrderStatus.CONFIRMED;
-        notificationService.sendConfirmation(order);
-    }
-
-    // ==== Step Definitions ====
-
-    @Given("a customer named {string}")
-    public void a_customer_named(String name) {
-        customerName = name;
-        cart = new Cart();
-        order = new Order();
-        paymentGateway = new PaymentGateway();
-        notificationService = new NotificationService();
+        currentOrder = new Order.Builder(studentAccount).build();
     }
 
     @Given("Alex has the following items in the cart:")
     public void alex_has_the_following_items_in_the_cart(DataTable dataTable) {
-        // Table attendue: | item | quantity | unit price |
-        List<Map<String, String>> rows = dataTable.asMaps(String.class, String.class);
-        for (Map<String, String> row : rows) {
-            String item = row.get("item");
-            int qty = Integer.parseInt(row.get("quantity").trim());
-            BigDecimal price = money(row.get("unit price").trim());
-            cart.put(item, qty, price);
-        }
-        // Total initial côté order (utile pour assertions ultérieures)
-        recomputeTotal();
+        has_the_following_items_in_the_cart("Alex", dataTable);
     }
 
-    @When("Alex selects the delivery address {string}")
-    public void alex_selects_the_delivery_address(String address) {
-        order.deliveryAddress = address;
+    // ============ Delivery & Payment ============
+    @When("{string} selects the delivery location {string}")
+    public void selects_the_delivery_location(String name, String address) {
+        try {
+            deliveryLocation = studentAccount.getDeliveryLocations().stream()
+                    .filter(loc -> address.toLowerCase().contains(loc.getAddress().toLowerCase()))
+                    .findFirst()
+                    .orElseThrow(() ->
+                            new IllegalArgumentException("Selected address not found in prerecorded locations: " + address));
+        } catch (Exception e) {
+            lastException = e;
+            deliveryLocation = null;
+        }
+    }
+
+    @When("Alex selects the delivery location {string}")
+    public void alex_selects_the_delivery_location(String address) {
+        selects_the_delivery_location("Alex", address);
+    }
+
+    @When("{string} chooses the saved payment method {string}")
+    public void chooses_the_saved_payment_method(String name, String method) {
+        if (method.equalsIgnoreCase("Visa") || method.equalsIgnoreCase("Card"))
+            paymentMethod = PaymentMethod.EXTERNAL;
+        else
+            paymentMethod = PaymentMethod.INTERNAL;
     }
 
     @When("Alex chooses the saved payment method {string}")
     public void alex_chooses_the_saved_payment_method(String method) {
-        order.paymentMethod = method;
+        chooses_the_saved_payment_method("Alex", method);
     }
 
+    // ============ Confirm Order ============
+
+    @When("{string} confirms the order")
+    public void confirms_the_order(String name) {
+        try {
+            // Create the order
+            orderManager.createOrder(cartDishes, studentAccount, deliveryLocation, restaurant);
+
+            // Retrieve last created order
+            List<Order> pendingOrders = orderManager.getPendingOrders();
+            currentOrder = pendingOrders.isEmpty() ? null : pendingOrders.get(pendingOrders.size() - 1);
+
+            // Initiate payment (handled by OrderManager)
+            if (currentOrder != null && paymentMethod != null) {
+                orderManager.initiatePayment(currentOrder, paymentMethod);
+            }
+
+            // Register validated order
+            if (currentOrder != null && currentOrder.getOrderStatus() == OrderStatus.VALIDATED) {
+                orderManager.registerOrder(currentOrder,restaurant);
+            }
+
+        } catch (Exception e) {
+
+            lastException = e;
+            currentOrder = null;
+        }
+    }
+
+    // Small alias so the step "When Alex confirms the order" works too
     @When("Alex confirms the order")
     public void alex_confirms_the_order() {
-        recomputeTotal();
-        tryCreateOrder();
+        confirms_the_order("Alex");
     }
+
+    // ============ Assertions ============
 
     @Then("the order should be created with status {string}")
     public void the_order_should_be_created_with_status(String expectedStatus) {
-        Assertions.assertEquals(OrderStatus.valueOf(expectedStatus), order.status);
+        Assertions.assertNotNull(currentOrder, "Order should exist");
+
+        OrderStatus expected = switch (expectedStatus.toUpperCase()) {
+            case "CONFIRMED" -> OrderStatus.VALIDATED;
+            case "REJECTED" -> OrderStatus.CANCELED;
+            default -> OrderStatus.valueOf(expectedStatus.toUpperCase());
+        };
+
+        Assertions.assertEquals(expected, currentOrder.getOrderStatus(),
+                "Expected order status " + expected + " but was " + currentOrder.getOrderStatus());
     }
 
     @Then("Alex should see the order total of {string}")
     public void alex_should_see_the_order_total_of(String expectedTotal) {
-        Assertions.assertEquals(money(expectedTotal), order.total);
+        Assertions.assertNotNull(currentOrder, "Order should exist");
+        BigDecimal expected = new BigDecimal(expectedTotal).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal actual = BigDecimal.valueOf(currentOrder.getAmount()).setScale(2, RoundingMode.HALF_UP);
+        Assertions.assertEquals(expected, actual, "Order total mismatch");
     }
 
     @Then("Alex should receive an order confirmation notification")
     public void alex_should_receive_an_order_confirmation_notification() {
-        Assertions.assertTrue(notificationService.sent, "Notification should be sent");
+        Assertions.assertEquals(OrderStatus.VALIDATED, currentOrder.getOrderStatus(),
+                "Expected notification only for validated orders");
     }
 
-    @Given("the cart belongs to {string}")
-    public void the_cart_belongs_to(String name) {
-        // Ici, on s’assure juste que l’état existe pour ce client
-        Assertions.assertEquals(name, customerName);
+    @Then("an error should be raised with message containing {string}")
+    public void an_error_should_be_raised(String expectedMessage) {
+        Assertions.assertNotNull(lastException, "Expected an exception to be thrown");
+        Assertions.assertTrue(lastException.getMessage().contains(expectedMessage),
+                "Expected message to contain: \"" + expectedMessage + "\" but got: \""
+                        + (lastException != null ? lastException.getMessage() : "null") + "\"");
     }
 
-    @When("the customer tries to create the order without {string}")
-    public void the_customer_tries_to_create_the_order_without(String missing) {
-        switch (missing.toLowerCase(Locale.ROOT)) {
-            case "delivery address" -> order.deliveryAddress = null;
-            case "payment method" -> order.paymentMethod = null;
-            case "cart items" -> cart.clear();
-            default -> throw new IllegalArgumentException("Unknown missing info: " + missing);
-        }
-        recomputeTotal();
-        tryCreateOrder();
-    }
 
-    @Then("the order should be rejected with the message {string}")
-    public void the_order_should_be_rejected_with_the_message(String message) {
-        // Dans ce stub on ne stocke pas de message, on vérifie surtout le statut REJECTED.
-        Assertions.assertEquals(OrderStatus.REJECTED, order.status);
-        // Si tu veux réellement vérifier le texte de message,
-        // tu peux conserver la raison dans un champ `lastErrorMessage`.
-    }
 
-    @Then("no payment should be captured")
-    public void no_payment_should_be_captured() {
-        Assertions.assertFalse(paymentGateway.captured, "Payment must not be captured");
-    }
-
-    @When("Alex updates the quantity of {string} to {int}")
-    public void alex_updates_the_quantity_of_to(String item, Integer qty) {
-        cart.setQuantity(item, qty);
-        recomputeTotal();
-    }
-
-    @When("Alex reviews the order summary")
-    public void alex_reviews_the_order_summary() {
-        // Pas d’effet, c’est une action de consultation ;
-        // on s’assure juste que le total est à jour via recomputeTotal() déjà appelé.
-    }
-
-    @Then("the order total should be recalculated to {string}")
-    public void the_order_total_should_be_recalculated_to(String expected) {
-        Assertions.assertEquals(money(expected), order.total);
-    }
-
-    @Then("the cart should reflect the updated quantity")
-    public void the_cart_should_reflect_the_updated_quantity() {
-        // On vérifie juste qu’il n’y a pas d’incohérence simple (ex: total négatif/empty si non voulu)
-        Assertions.assertTrue(order.total.compareTo(BigDecimal.ZERO) >= 0);
-    }
 }

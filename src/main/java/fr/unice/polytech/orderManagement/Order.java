@@ -2,9 +2,11 @@ package fr.unice.polytech.orderManagement;
 
 
 import fr.unice.polytech.dishes.Dish;
+import fr.unice.polytech.paymentProcessing.PaymentMethod;
 import fr.unice.polytech.restaurants.Restaurant;
 import fr.unice.polytech.users.DeliveryLocation;
 import fr.unice.polytech.users.StudentAccount;
+import fr.unice.polytech.users.UserAccount;
 
 import java.util.List;
 import java.util.Objects;
@@ -16,6 +18,7 @@ public class Order {
     private OrderStatus orderStatus;
     private List<Dish> dishes;
     private DeliveryLocation deliveryLocation;
+    private PaymentMethod paymentMethod;
 
 
     private Order(Builder builder) {
@@ -61,6 +64,17 @@ public class Order {
 
     public void setDeliveryLocation(DeliveryLocation deliveryLocation) {
         this.deliveryLocation = deliveryLocation;
+    }
+
+    public PaymentMethod getPaymentMethod(UserAccount user) {
+        if ( (user instanceof Restaurant) || !user.equals(this.studentAccount)) {
+            throw new IllegalArgumentException("Access denied: User does not own this order.");
+        }
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(PaymentMethod paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 
     public static class Builder {

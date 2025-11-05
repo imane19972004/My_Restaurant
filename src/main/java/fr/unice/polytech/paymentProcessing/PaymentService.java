@@ -4,12 +4,16 @@ import fr.unice.polytech.orderManagement.Order;
 
 public class PaymentService implements IPaymentService{
     MockedExternalPaymentSystem externalPaymentSystem;
-    public PaymentService(MockedExternalPaymentSystem externalPaymentSystem, Order order){
 
+    public PaymentService(MockedExternalPaymentSystem externalPaymentSystem, Order order){
+        this.externalPaymentSystem = externalPaymentSystem != null
+                ? externalPaymentSystem
+                : new MockedExternalPaymentSystem(null);
     }
 
 
     public PaymentService(){
+        this.externalPaymentSystem = new MockedExternalPaymentSystem(null);
     }
 
     public PaymentService(Order order) {

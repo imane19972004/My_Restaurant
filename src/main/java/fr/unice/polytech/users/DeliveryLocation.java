@@ -58,7 +58,10 @@ public class DeliveryLocation {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         DeliveryLocation that = (DeliveryLocation) o;
-        return Objects.equals(name, that.name) && Objects.equals(address, that.address) && Objects.equals(city, that.city) && Objects.equals(zipCode, that.zipCode);
+        return Objects.equals(name, that.name)
+                && Objects.equals(address, that.address)
+                && Objects.equals(city, that.city)
+                && Objects.equals(zipCode, that.zipCode);
     }
 
     @Override

@@ -1,3 +1,4 @@
+// language: java
 package fr.unice.polytech.orderManagement;
 
 import fr.unice.polytech.dishes.Dish;
@@ -13,7 +14,6 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -56,7 +56,6 @@ class OrderManagerTest {
     void testCreateOrder() throws Exception {
         orderManager.createOrder(mockDishes, mockStudentAccount, mockDeliveryLocation, mockRestaurant);
 
-        verify(mockRestaurant).addOrder(any(Order.class));
 
         Field pendingOrdersField = OrderManager.class.getDeclaredField("pendingOrders");
         pendingOrdersField.setAccessible(true);
@@ -69,22 +68,11 @@ class OrderManagerTest {
         assertEquals(mockDishes, createdOrder.getDishes());
         assertEquals(mockDeliveryLocation, createdOrder.getDeliveryLocation());
         assertEquals(mockRestaurant, createdOrder.getRestaurant());
+        assertEquals(OrderStatus.PENDING, createdOrder.getOrderStatus());
     }
 
     @Test
-    void testCreateOrderTimerStart() throws Exception {
-        orderManager.createOrder(mockDishes, mockStudentAccount, mockDeliveryLocation, mockRestaurant);
-
-        Field orderCreationTimesField = OrderManager.class.getDeclaredField("orderCreationTimes");
-        orderCreationTimesField.setAccessible(true);
-        Map<Order, Long> orderCreationTimes = (Map<Order, Long>) orderCreationTimesField.get(orderManager);
-
-        assertEquals(1, orderCreationTimes.size());
-        Long creationTime = orderCreationTimes.values().iterator().next();
-        assertTrue(Math.abs(System.currentTimeMillis() - creationTime) < 1000);
-    }
-    @Test
-    void testInitiatePaymentBeforeTimeout() throws Exception {
+    void testInitiatePaymentInvokesFactoryAndProcessor() throws Exception {
         PaymentProcessorFactory factory = mock(PaymentProcessorFactory.class);
         IPaymentProcessor processor = mock(IPaymentProcessor.class);
         when(factory.createProcessor(any(Order.class), eq(PaymentMethod.EXTERNAL)))
@@ -103,40 +91,12 @@ class OrderManagerTest {
         assertEquals(1, pending.size());
         Order order = pending.get(0);
 
-        Field t = OrderManager.class.getDeclaredField("orderCreationTimes");
-        t.setAccessible(true);
-        @SuppressWarnings("unchecked")
-        Map<Order, Long> orderCreationTimes = (Map<Order, Long>) t.get(manager);
-        orderCreationTimes.put(order, System.currentTimeMillis());
-
         manager.initiatePayment(order, PaymentMethod.EXTERNAL);
 
         verify(factory).createProcessor(order, PaymentMethod.EXTERNAL);
         verify(processor).processPayment(order);
         assertEquals(OrderStatus.VALIDATED, order.getOrderStatus());
-        assertEquals(1, pending.size()); // still pending until registerOrder is called
-    }
-
-
-    @Test
-    void testInitiatePaymentAfterTimeout() throws Exception {
-        orderManager.createOrder(mockDishes, mockStudentAccount, mockDeliveryLocation, mockRestaurant);
-
-        Field pendingOrdersField = OrderManager.class.getDeclaredField("pendingOrders");
-        pendingOrdersField.setAccessible(true);
-        List<Order> pendingOrders = (List<Order>) pendingOrdersField.get(orderManager);
-        Order order = pendingOrders.get(0);
-
-
-        Field orderCreationTimesField = OrderManager.class.getDeclaredField("orderCreationTimes");
-        orderCreationTimesField.setAccessible(true);
-        Map<Order, Long> orderCreationTimes = (Map<Order, Long>) orderCreationTimesField.get(orderManager);
-        orderCreationTimes.put(order, System.currentTimeMillis() - (4 * 60 * 1000));
-
-        orderManager.initiatePayment(order, PaymentMethod.EXTERNAL);
-
-        assertEquals(OrderStatus.CANCELED, order.getOrderStatus());
-        assertEquals(0, pendingOrders.size());
+        assertEquals(1, pending.size());
     }
 
     @Test
@@ -150,16 +110,10 @@ class OrderManagerTest {
         List<Order> pendingOrders = (List<Order>) pendingOrdersField.get(orderManager);
         pendingOrders.add(order);
 
-        Field orderCreationTimesField = OrderManager.class.getDeclaredField("orderCreationTimes");
-        orderCreationTimesField.setAccessible(true);
-        Map<Order, Long> orderCreationTimes = (Map<Order, Long>) orderCreationTimesField.get(orderManager);
-        orderCreationTimes.put(order, System.currentTimeMillis());
-
-        boolean result = orderManager.registerOrder(order);
+        boolean result = orderManager.registerOrder(order, mockRestaurant);
 
         assertTrue(result);
         assertEquals(0, pendingOrders.size());
-        assertFalse(orderCreationTimes.containsKey(order));
 
         Field registeredOrdersField = OrderManager.class.getDeclaredField("registeredOrders");
         registeredOrdersField.setAccessible(true);
@@ -174,7 +128,7 @@ class OrderManagerTest {
                 .orderStatus(OrderStatus.PENDING)
                 .build();
 
-        boolean result = orderManager.registerOrder(order);
+        boolean result = orderManager.registerOrder(order, mockRestaurant);
 
         assertFalse(result);
     }
@@ -182,7 +136,6 @@ class OrderManagerTest {
     @Test
     void testCalculateTotalAmount() {
         orderManager.createOrder(mockDishes, mockStudentAccount, mockDeliveryLocation, mockRestaurant);
-
 
         verify(mockDish1).getPrice();
         verify(mockDish2).getPrice();
@@ -200,11 +153,6 @@ class OrderManagerTest {
         pendingOrdersField.setAccessible(true);
         List<Order> pendingOrders = (List<Order>) pendingOrdersField.get(managerWithFactory);
         pendingOrders.add(order);
-
-        Field orderCreationTimesField = OrderManager.class.getDeclaredField("orderCreationTimes");
-        orderCreationTimesField.setAccessible(true);
-        Map<Order, Long> orderCreationTimes = (Map<Order, Long>) orderCreationTimesField.get(managerWithFactory);
-        orderCreationTimes.put(order, System.currentTimeMillis());
 
         IPaymentProcessor processor = mock(IPaymentProcessor.class);
         when(factory.createProcessor(order, PaymentMethod.EXTERNAL)).thenReturn(processor);

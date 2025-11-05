@@ -33,13 +33,6 @@ public class RestaurantTimeSlotManagementSteps {
 
     // ============ BACKGROUND STEPS ============
 
-    @Given("the restaurant manager is logged in to {string}")
-    public void the_restaurant_manager_is_logged_in_to(String restaurantName) {
-        assertNotNull(ctx.restaurant, "Restaurant should be initialized");
-        assertEquals(restaurantName, ctx.restaurant.getRestaurantName());
-        ctx.managerLoggedIn = true;
-        restaurantManager.addRestaurant(ctx.restaurant);
-    }
 
     // ============ SCENARIO 1: Define slots ============
 

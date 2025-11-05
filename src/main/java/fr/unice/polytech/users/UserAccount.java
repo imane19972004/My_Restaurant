@@ -1,23 +1,17 @@
 package fr.unice.polytech.users; // Assuming this package
 
-public class UserAccount {
+public abstract class  UserAccount {
     
     private String name;
     private String surname;
     private String email;
 
-    /**
-     * Constructor for UserAccount.
-     */
-    public UserAccount(String name, String surname) {
-        this.name = name;
-        this.surname = surname;
-    }
     public UserAccount(String name, String surname, String email) {
         this.name = name;
         this.surname = surname;
         this.email = email;
     }
+    public UserAccount(){}
     
     public String getName() {
         return name;

@@ -15,8 +15,6 @@ public class OrderManager {
 
     private List<Order> registeredOrders;
     private List<Order> pendingOrders;
-    private Map<Order, Long> orderCreationTimes;
-    private static final long TIMEOUT_MILLIS = 3 * 60 * 1000; // 3 minutes
     private final PaymentProcessorFactory paymentProcessorFactory;
 
     public OrderManager(){
@@ -27,10 +25,15 @@ public class OrderManager {
         this.paymentProcessorFactory = paymentProcessorFactory;
         registeredOrders = new java.util.ArrayList<>();
         pendingOrders = new java.util.ArrayList<>();
-        orderCreationTimes = new HashMap<>();
     }
 
     public void createOrder(List<Dish> dishes, StudentAccount studentAccount, DeliveryLocation deliveryLocation, Restaurant restaurant) {
+        if (dishes == null || dishes.isEmpty()) {
+            throw new IllegalArgumentException("Empty cart");
+        }
+        if (deliveryLocation == null) {
+            throw new IllegalArgumentException("Missing delivery address");
+        }
         if (!studentAccount.hasDeliveryLocation(deliveryLocation)) {
             throw new IllegalArgumentException("Order creation failed: Delivery location is not among the student's saved locations.");
         }
@@ -39,56 +42,45 @@ public class OrderManager {
                 .amount(calculateTotalAmount(dishes))
                 .deliveryLocation(deliveryLocation)
                 .restaurant(restaurant)
+                .orderStatus(OrderStatus.PENDING)
                 .build();
 
-        restaurant.addOrder(order);
         pendingOrders.add(order);
-        orderCreationTimes.put(order, System.currentTimeMillis());
 
     }
 
 
     public void initiatePayment(Order order, PaymentMethod paymentMethod) {
         if (paymentMethod == null) {
-            // The payment method comes from the user selection in the order confirmation flow and can be
-            // missing when the client submits an incomplete request. Fail fast with an explicit error
-            // instead of letting the processor selection crash on a null value.
             throw new IllegalArgumentException("Payment method must be provided");
         }
-        if (isOrderTimedOut(order)) {
-            dropOrder(order);
-            return;
-        }
+        /*
+        * */
         //Creattion du processeur de paiement via la factory
         IPaymentProcessor processor = paymentProcessorFactory.createProcessor(order, paymentMethod);
 
-        // Traitement du paiement (réutilisé pour les deux types)
+        order.setPaymentMethod(paymentMethod);
         OrderStatus status = processor.processPayment(order);
         order.setOrderStatus(status);
 
     }
 
     private void dropOrder(Order order) {
-        order.setOrderStatus(OrderStatus.CANCELED);
         pendingOrders.remove(order);
-        orderCreationTimes.remove(order); // Important: remove the timer
-    }
-
-    private boolean isOrderTimedOut(Order order) {
-        Long creationTime = orderCreationTimes.get(order);
-        return (System.currentTimeMillis() - creationTime) > TIMEOUT_MILLIS;
     }
 
 
-    public boolean registerOrder(Order order) {
+
+    public boolean registerOrder(Order order, Restaurant restaurant) {
         if (order.getOrderStatus() == OrderStatus.VALIDATED) {
             registeredOrders.add(order);
             pendingOrders.remove(order);
-            orderCreationTimes.remove(order);
+            restaurant.addOrder(order);
             return true;
-        } else {
-            return false;
+        } else if (order.getOrderStatus() == OrderStatus.CANCELED) {
+            dropOrder(order);
         }
+        return false;
     }
 
 

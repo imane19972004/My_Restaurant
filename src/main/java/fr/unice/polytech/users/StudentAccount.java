@@ -5,6 +5,7 @@ import fr.unice.polytech.paymentProcessing.BankInfo;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 // Note: Requires UserAccount class from above.
 public class StudentAccount extends UserAccount {
@@ -116,5 +117,16 @@ public class StudentAccount extends UserAccount {
         }
 
     }
-   
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        StudentAccount that = (StudentAccount) o;
+        return Double.compare(balance, that.balance) == 0 && Objects.equals(studentID, that.studentID) && Objects.equals(bankInfo, that.bankInfo) && Objects.equals(prerecordedLocations, that.prerecordedLocations);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(studentID, balance, bankInfo, prerecordedLocations);
+    }
 }

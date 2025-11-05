@@ -11,24 +11,20 @@ import java.util.*;
 
 public class RestaurantDishManagementSteps {
     private final ScenarioContext ctx;
-    
-    public RestaurantDishManagementSteps(ScenarioContext ctx) { 
-        this.ctx = ctx; 
+
+    public RestaurantDishManagementSteps(ScenarioContext ctx) {
+        this.ctx = ctx;
     }
 
     // On mémorise juste le dernier plat manipulé
     private String lastDishName;
     private final List<String> currentDishTags = new ArrayList<>();
     private String currentAllergenInfo;
+    private final Map<String, Double> extraOptions = new HashMap<>();
 
     // ============ BACKGROUND STEPS ============
 
-    @Given("the restaurant manager is logged in to {string}")
-    public void the_restaurant_manager_is_logged_in_to(String restaurantName) {
-        assertNotNull(ctx.restaurant, "Restaurant should be initialized");
-        assertEquals(restaurantName, ctx.restaurant.getRestaurantName());
-        ctx.managerLoggedIn = true;
-    }
+
 
     // ============ SCENARIO 1: Add a new dish ============
 
@@ -49,7 +45,6 @@ public class RestaurantDishManagementSteps {
             String category = dishData.get("category").replace(" ", "_").toUpperCase();
             dish.setCategory(DishCategory.valueOf(category));
         }
-        // "type" est ignoré ici (pas utilisé par les assertions)
     }
 
     @Then("the dish {string} should be added to the menu")
@@ -69,8 +64,8 @@ public class RestaurantDishManagementSteps {
 
     // ============ SCENARIO 2: Dietary tags ============
 
-    @When("I tag the dish as {string} and {string}")
-    public void i_tag_the_dish_as(String tag1, String tag2) {
+    @When("the restaurant manager tags the dish as {string} and {string}")
+    public void the_restaurant_manager_tags_the_dish_as(String tag1, String tag2) {
         assertNotNull(lastDishName, "A dish should have been created earlier");
         currentDishTags.clear();
         currentDishTags.add(tag1);
@@ -93,8 +88,8 @@ public class RestaurantDishManagementSteps {
         lastDishName = dishName;
     }
 
-    @When("I add a topping {string} with price {double}")
-    public void i_add_a_topping_with_price(String toppingName, double price) {
+    @When("the restaurant manager adds a topping {string} with price {double}")
+    public void the_restaurant_manager_adds_a_topping_with_price(String toppingName, double price) {
         assertNotNull(lastDishName, "No current dish context");
         Dish dish = ctx.restaurant.findDishByName(lastDishName);
         assertNotNull(dish, "Dish should exist");
@@ -123,27 +118,27 @@ public class RestaurantDishManagementSteps {
 
     // ============ SCENARIO 4: Update dish ============
 
-    @When("I update the dish price to {double}")
-    public void i_update_the_dish_price_to(double newPrice) {
+    @When("the restaurant manager updates the dish price to {double}")
+    public void the_restaurant_manager_updates_the_dish_price_to(double newPrice) {
         assertNotNull(lastDishName, "No current dish context");
         Dish dish = ctx.restaurant.findDishByName(lastDishName);
         assertNotNull(dish, "Dish should exist");
         dish.setPrice(newPrice);
     }
 
-    @When("I update the description to {string}")
-    public void i_update_the_description_to(String newDescription) {
+    @When("the restaurant manager updates the description to {string}")
+    public void the_restaurant_manager_updates_the_description_to(String newDescription) {
         assertNotNull(lastDishName, "No current dish context");
         Dish dish = ctx.restaurant.findDishByName(lastDishName);
         assertNotNull(dish, "Dish should exist");
         dish.setDescription(newDescription);
     }
 
-    @Then("the dish {string} description should be {string}")
-    public void the_dish_description_should_be(String dishName, String expectedDescription) {
+    @Then("the dish {string} should have price {double}")
+    public void the_dish_should_have_price(String dishName, double expectedPrice) {
         Dish dish = ctx.restaurant.findDishByName(dishName);
         assertNotNull(dish, "Dish should be found");
-        //assertEquals(expectedPrice, dish.getPrice(), 0.01);
+        assertEquals(expectedPrice, dish.getPrice(), 0.01);
     }
 
     @Then("the dish description should be {string}")
@@ -182,7 +177,6 @@ public class RestaurantDishManagementSteps {
     }
 
     // ============ SCENARIO 6: Extra options ============
-    private final Map<String, Double> extraOptions = new HashMap<>();
 
     @When("the restaurant manager defines an extra option {string} with price {double}")
     public void the_restaurant_manager_defines_an_extra_option_with_price(String extraName, double price) {
@@ -194,8 +188,8 @@ public class RestaurantDishManagementSteps {
         assertEquals(expectedCount, extraOptions.size());
     }
 
-    @Then("the option {string} should cost {double} euros")
-    public void the_option_should_cost_euros(String optionName, double expectedPrice) {
+    @Then("option {string} should cost {double} euros")
+    public void option_should_cost_euros(String optionName, double expectedPrice) {
         assertTrue(extraOptions.containsKey(optionName),
                 "Extra option '" + optionName + "' should exist");
         assertEquals(expectedPrice, extraOptions.get(optionName), 0.01);
@@ -203,12 +197,10 @@ public class RestaurantDishManagementSteps {
 
     // ============ SCENARIO 7: Allergen information ============
 
-    @When("I add allergen information {string}")
-    public void i_add_allergen_information(String allergenInfo) {
+    @When("the restaurant manager adds allergen information {string}")
+    public void the_restaurant_manager_adds_allergen_information(String allergenInfo) {
         assertNotNull(lastDishName, "No current dish context");
-        // Si ton domaine supporte l’info allergène, fais :
-        // ctx.restaurant.findDishByName(lastDishName).setAllergenInfo(allergenInfo);
-        currentAllergenInfo = allergenInfo; // stock local pour assertions
+        currentAllergenInfo = allergenInfo;
     }
 
     @Then("the dish should display allergen warning")

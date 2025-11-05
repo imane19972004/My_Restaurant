@@ -1,51 +1,41 @@
-# SopiaTech Eats-Team-25-26 #template
-_Template for classroom SI4-COO_
+# SopiaTech Eats – Team I-1
 
->. CETTE PAGE DOIT ÊTRE MISE À JOUR POUR CORRESPONDRE À VOTRE PROJET.  
->. C'est seulement un modèle !!
->. Vous l'organisez comme bon vous semble, mais comme un vrai projet.
+## Équipe projet
+- Fares Kobbi – Software Architect (SA)
+- Youssef Ben Mzoughia – Software Architect (SA)
+- Younes Hammoud – Operations (OPS)
+- Rajaa Tchani – Product Owner (PO)
+- Imane Amraoui – Quality Assurance (QA)
 
+## Installer et lancer le projet
+1. **Prérequis**
+    - JDK 17
+    - Maven 3.9+
+2. **Cloner le dépôt**
+   ```bash
+   git clone https://github.com/PNS-Conception/ste-25-26-team-i-1.git
+   cd ste-25-26-team-i-1
+   ```
+3. **Construire et exécuter les tests**
+   ```bash
+   mvn clean package
+   mvn test
+   ```
+4. **Lancer l'application**
+    - Ce dépôt propose pour l'instant l'ossature du projet backend. Les prochaines itérations introduiront les modules applicatifs.
 
-## TEAM
+## Structure du projet
+```
+.
+├── doc/           # Documentation fonctionnelle et technique
+├── src/
+│   ├── main/      # Code applicatif (à compléter au fil des sprints)
+│   └── test/      # Jeux de tests JUnit & Cucumber
+├── pom.xml        # Configuration Maven (JDK 17, Cucumber 7, JUnit 5)
+└── README.md      # Présentation du projet
+```
 
-* Tchani Rajaa– PO
-* Amraoui Imane – QA
-* Hammoud Younes _ OPS
-* Youssef Ben Mzoughia _ SA
-* Fares Kobbi _SA
+Cette structure standard permet de séparer clairement le code de production et les tests. Les dépendances (Cucumber, JUnit, etc.) sont centralisées dans le `pom.xml`.
 
-## doc
-Contient vos rapports et les documents qui présentent votre projet.
-
-
-## .github
-   1. Contient sous workflows/maven.yml, une version d'un fichier d'actions qui est déclenché dès que vous poussez du code. 
-Sur cette version initiale, seul un test Junit5 est déclenché pour vérifier que tout fonctionne.
-       - Github Actions (See in .github/workflows) to simply make a maven+test compilation
-  2. Contient sous ISSUE_TEMPLATE, les modèles pour les issues user_story et bug. Vous pouvez le compléter à votre guise.
-
-## src
- - pom.xml :  
-       - Cucumber 7 et JUnit 5  
-       - JDK 17   
-       - Etc.  
-   Ce pom.xml sera mis à jour avec la démonstration qui vous sera donnée ultérieurement.
-
-Lorsque vous passerez en développement, les codes donnés peuvent être éliminés.   
-De nouveaux exemples vous seront donnés.   
-Nous les laissons cependant pour vous permettre de vérifier que vous n'avez pas de problème d'intégration continue.
-
-
-<!-- ## Ce que fait votre projet
-
-
-### Principales User stories
-Vous mettez en évidence les principales user stories de votre projet.
-Chaque user story doit être décrite par 
-   - son identifiant en tant que issue github (#), 
-   - sa forme classique (As a… I want to… In order to…) (pour faciliter la lecture)
-   - Le nom du fichier feature Cucumber et le nom des scénarios qui servent de tests d’acceptation pour la story.
-   Les contenus détaillés sont dans l'issue elle-même. -->
-   
-
-   
+## Tableau Kanban de l'équipe
+[Github – Kanban SopiaTech Eats Team I-1](https://github.com/orgs/PNS-Conception/projects/91)
