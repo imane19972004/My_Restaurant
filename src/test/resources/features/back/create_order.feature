@@ -1,37 +1,31 @@
-Feature: Create an order (guest flow)
-  As a hungry customer
-  I want to place an order for my meal
-  So that I can receive my food delivery
+Feature: Order creation and validation
+  As a student
+  I want to create an order from a restaurant
+  So that I can get my meal delivered
 
   Background:
-    Given a customer named "Alex"
-    And Alex has the following items in the cart:
-      | item             | quantity | unit price |
-      | Margherita pizza | 1        | 12.50      |
-      | Tiramisu         | 2        | 4.00       |
+    Given a client named "Alex"
+    And "Alex" has a student credit balance of "30.00"
 
-  Scenario: Successfully create an order with a saved payment method
-    When Alex selects the delivery address "25 rue de France, Nice"
+  Scenario: Successful order creation with external payment
+    Given Alex has the following items in the cart:
+      | item   | unit price |
+      | Burger | 8.50       |
+      | Fries  | 3.00       |
+    When Alex selects the delivery location "10 Rue de France, Nice"
     And Alex chooses the saved payment method "Visa"
     And Alex confirms the order
-    Then the order should be created with status "CONFIRMED"
-    And Alex should see the order total of "20.50"
+    Then the order should be created with status "VALIDATED"
+    And Alex should see the order total of "11.50"
     And Alex should receive an order confirmation notification
 
-  Scenario Outline: Prevent order creation when required information is missing
-    Given the cart belongs to "<customer>"
-    When the customer tries to create the order without "<missing information>"
-    Then the order should be rejected with the message "<error message>"
-    And no payment should be captured
 
-    Examples:
-      | customer | missing information | error message                          |
-      | Alex     | delivery address    | Delivery address is required           |
-      | Alex     | payment method      | Payment method must be provided        |
-      | Alex     | cart items          | Cannot create an order with empty cart |
-
-  Scenario: Update totals when an item quantity changes before confirmation
-    When Alex updates the quantity of "Tiramisu" to 1
-    And Alex reviews the order summary
-    Then the order total should be recalculated to "16.50"
-    And the cart should reflect the updated quantity
+     #  Invalid delivery location
+  Scenario: Order creation fails when delivery location not saved
+    Given Alex has the following items in the cart:
+      | item   | unit price |
+      | Pizza  | 9.00       |
+    When Alex selects the delivery location "Unknown Street, Nice"
+    And Alex chooses the saved payment method "Visa"
+    And Alex confirms the order
+    Then an error should be raised with message containing "Missing delivery address"
