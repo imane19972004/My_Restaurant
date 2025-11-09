@@ -6,7 +6,6 @@ import fr.unice.polytech.dishes.DishType;
 import fr.unice.polytech.dishes.DishCategory;
 import fr.unice.polytech.orderManagement.Order;
 
-import fr.unice.polytech.dishes.DishType;
 import fr.unice.polytech.users.UserAccount;
 
 import java.util.ArrayList;

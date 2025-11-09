@@ -13,6 +13,7 @@
         <java.version>17</java.version>
         <junit.jupiter.version>5.8.0</junit.jupiter.version>
         <cucumber.version>7.13.0</cucumber.version>
+         <jackson.version>2.15.2</jackson.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -35,6 +36,20 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- Jackson pour JSON/DTOs -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-java</artifactId>
@@ -118,6 +133,15 @@
                             cucumber.junit-platform.naming-strategy=long
                         </configurationParameters>
                     </properties>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <!--suppress UnresolvedMavenProperty -->
+                    <mainClass>${exec.mainClass}</mainClass>
                 </configuration>
             </plugin>
         </plugins>
