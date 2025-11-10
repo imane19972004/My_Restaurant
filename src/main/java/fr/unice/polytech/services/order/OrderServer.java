@@ -6,7 +6,7 @@ import fr.unice.polytech.orderManagement.OrderManager;
 import fr.unice.polytech.restaurants.RestaurantManager;
 import fr.unice.polytech.services.order.handlers.OrderHandler;
 import fr.unice.polytech.services.order.handlers.PaymentHandler;
-import fr.unice.polytech.services.order.handlers.TimeSlotHandler;
+ import fr.unice.polytech.services.order.handlers.TimeSlotHandler;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -41,10 +41,10 @@ public class OrderServer {
         server.createContext("/api/orders", new OrderHandler(orderManager, restaurantManager));
         
         // TimeSlot endpoints
-        server.createContext("/api/timeslots", new TimeSlotHandler(restaurantManager));
+         server.createContext("/api/timeslots", new TimeSlotHandler(restaurantManager));
         
         // Payment endpoints (proxy)
-        server.createContext("/api/payment", new PaymentHandler(orderManager));
+         server.createContext("/api/payment", new PaymentHandler(orderManager));
     }
     
     public void start() {
@@ -72,6 +72,7 @@ public class OrderServer {
     }
     
     public static void main(String[] args) {
+        
         try {
             OrderServer orderServer = new OrderServer();
             orderServer.start();
